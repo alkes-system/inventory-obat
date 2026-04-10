@@ -1,0 +1,631 @@
+{% extends 'include/include.html' %}
+{% block pjax_content %}
+  <div class="page-titles pb-0">
+    <div class="row">
+      <div class="col-lg-8 col-md-6 col-12 align-self-center">
+        <nav aria-label="breadcrumb">
+          <ol class="breadcrumb mb-0 d-flex align-items-center">
+            <li class="breadcrumb-item">
+              <a href="/admin/dashboard" class="link"><i class="ri-home-3-line fs-5"></i></a>
+            </li>
+            <li class="breadcrumb-item active" aria-current="page">Tambah Data Pengeluaran Barang</li>
+          </ol>
+        </nav>
+        <h1 class="mb-0 fw-bold">Tambah Data Pengeluaran Barang</h1>
+      </div>
+      <div class="col-lg-4 col-md-6 d-md-flex align-items-center justify-content-end"></div>
+    </div>
+  </div>
+
+  <div class="container-fluid">
+    <div class="row">
+      <div class="col-12">
+        <div class="card">
+          <div class="card-body">
+            <div>
+              <!-- Tanggal -->
+              <div class="form-group">
+                <label for="tglfaktur">Tanggal Faktur</label>
+                <div class="input-group">
+                  <input type="text" id="tglfaktur" class="complex-colorpicker tglfaktur form-control" value="{{ tanggal|format_date }}" placeholder="dd/mm/yyyy" />
+                  <span class="input-group-text"><i data-feather="calendar" class="feather-sm"></i></span>
+                </div>
+              </div>
+
+              <!-- Jatuh Tempo (auto by /api/sales/invoice_no) -->
+              <div class="form-group">
+                <label for="jthtempo">Jatuh Tempo</label>
+                <div class="input-group">
+                  <input type="text" id="jthtempo" class="form-control" value="{{ jth_tempo|format_date }}" placeholder="dd/mm/yyyy" disabled />
+                  <span class="input-group-text"><i data-feather="calendar" class="feather-sm"></i></span>
+                </div>
+              </div>
+
+              <!-- Nomor Faktur (auto) -->
+              <div class="form-group">
+                <label for="nofaktur">Nomor Faktur</label>
+                <input type="text" id="nofaktur" value="{{ nofaktur }}" class="form-control" disabled />
+              </div>
+
+              <!-- Salesperson -->
+              <div class="form-group">
+                <label for="namasales">Salesperson</label>
+                <select id="namasales" class="select2 form-control" style="width:100%">
+                  <option value="">Pilih Sales</option>
+                  {% for s in data_sales %}
+                    <option value="{{ s.id or s.name }}" data-name="{{ s.name }}">{{ s.name }}</option>
+                  {% endfor %}
+                </select>
+                <input type="hidden" id="idsales" /> <!-- simpan id sales terpilih -->
+              </div>
+
+              <!-- Metode Pembayaran header (cashtempo) -->
+              <div class="form-group">
+                <label for="pembayaran">Metode Pembayaran</label>
+                <select id="pembayaran" class="form-select">
+                  <option value="">Pilih</option>
+                  <option value="CASH">Cash</option>
+                  <option value="TEMPO">Tempo</option>
+                </select>
+              </div>
+
+              <!-- Outlet (terfilter oleh salesperson) -->
+              <div class="form-group">
+                <label for="namaoutlet">Outlet</label>
+                <select id="namaoutlet" class="form-control select2" style="width:100%">
+                  <option value="">Pilih Outlet</option>
+                </select>
+                <small class="text-muted">Cari nama/alamat outlet.</small>
+                <input type="hidden" id="idoutlet" />
+              </div>
+
+              <!-- Alamat outlet (readonly) -->
+              <div class="form-group">
+                <label for="alamatoutlet">Alamat Outlet</label>
+                <input type="text" id="alamatoutlet" class="form-control" disabled />
+              </div>
+
+              <!-- Pajak -->
+              <div class="form-group">
+                <label for="pajak">Pajak</label>
+                <select id="pajak" class="form-select">
+                  <option value="">Pilih pajak</option>
+                  <option value="Iya">Iya</option>
+                  <option value="Tidak">Tidak</option>
+                </select>
+              </div>
+
+              <!-- Sender -->
+              <div class="form-group">
+                <label for="namapengirim">Pengirim</label>
+                <select id="namapengirim" class="select2 form-select" style="width:100%">
+                  <option value="">Tidak ada Pengirim</option>
+                  {% for s in data_pengirim %}
+                    <option value="{{ s.id or s.name }}" data-name="{{ s.name }}">{{ s.name }}</option>
+                  {% endfor %}
+                </select>
+                <input type="hidden" id="idsender" /> <!-- simpan id sales terpilih -->
+              </div>
+
+              <!-- REPEATER ITEM -->
+              <div class="email-repeater mb-3">
+                <div data-repeater-list="items">
+                  <div data-repeater-item class="row mb-3 bg-light border-top mt-4 p-3 rounded-3">
+                    <!-- Barang (value = id_barang, tampil stock & limit) -->
+                    <div class="form-group">
+                      <label>Nama Barang</label>
+                      <select class="form-control select2 sel-barang" style="width:100%">
+                        <option value="">Pilih Barang</option>
+                        {% for b in data_barang %}
+                          <option value="{{ b.id }}" data-kode="{{ b.code }}" data-qty="{{ b.unit }}" data-stok="{{ b.qty_on_hand }}" data-limit="{{ b.stock_min }}">{{ b.name }}</option>
+                        {% endfor %}
+                      </select>
+                      <small class="text-muted d-block">
+                        <span class="hint-stok">Stok: -</span> •
+                        <span class="hint-limit">Limit: -</span>
+                      </small>
+                    </div>
+
+                    <input type="hidden" class="idbarang" />
+                    <input type="text" class="qty form-control d-none" disabled />
+
+                    <div class="form-group">
+                      <label>Jumlah Permintaan</label>
+                      <input type="number" min="0" class="jmlpermintaan form-control" placeholder="0" />
+                    </div>
+
+                    <div class="form-group">
+                      <label>Harga Satuan</label>
+                      <div class="input-group">
+                        <span class="input-group-text">Rp</span>
+                        <input type="text" class="hargasatuan form-control" placeholder="0" oninput="formatAngkaInput(this)" />
+                        <input type="text" class="hargasatuan-koma form-control" maxlength="3" placeholder=",00" oninput="this.value = formatKoma(this.value)" />
+                      </div>
+                    </div>
+
+                    <div class="form-group">
+                      <label>Diskon (%)</label>
+                      <div class="input-group">
+                        <input type="number" class="diskon form-control" min="0" max="100" placeholder="0" oninput="formatDiskon(this)" />
+                        <span class="input-group-text">%</span>
+                      </div>
+                    </div>
+
+                    <div class="form-group">
+                      <label>Harga Total</label>
+                      <div class="input-group">
+                        <span class="input-group-text">Rp</span>
+                        <input type="text" class="hargatotal form-control" placeholder="0" disabled />
+                        <input type="text" class="hargatotal-koma form-control" maxlength="3" placeholder=",00" disabled />
+                      </div>
+                    </div>
+
+                    <div class="form-group">
+                      <label>Batch</label>
+                      <input type="text" id="batch" class="batch form-control" placeholder="-" />
+                    </div>
+
+                    <div class="form-group">
+                      <label>Expired Date (ED)</label>
+                      <div class="input-group">
+                        <input type="text" id="ed" class="complex-colorpicker2 ed form-control" placeholder="mm/yyyy" />
+                        <span class="input-group-text"><i data-feather="calendar" class="feather-sm"></i></span>
+                      </div>
+                    </div>
+
+                    <button data-repeater-delete class="mt-2 btn btn-danger w-100" type="button"><i data-feather="x-circle" class="feather-sm me-1"></i> Hapus Barang</button>
+                  </div>
+                </div>
+
+                <button type="button" data-repeater-create id="tambah-barang" class="btn btn-info w-100"><i data-feather="plus-circle" class="feather-sm me-1"></i> Tambah Barang</button>
+              </div>
+
+              <div class="text-end mt-3">
+                <button id="modal-submit-tambah" class="btn btn-info ms-2">Submit</button>
+                <a href="/admin/pengeluaran" class="btn btn-secondary">Back</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- JS -->
+  <script>
+  
+$('a[href="/admin/pengeluaran"]').addClass("active");
+  // Repeater
+  $(".email-repeater").repeater({
+    show: function () {
+      $(this).slideDown();
+      initSelect2Barang($(this).find('.sel-barang'));
+    },
+    hide: function (remove) {
+      if (confirm("Hapus item ini?")) $(this).slideUp(remove);
+    },
+  });
+  $(".select2").select2();
+
+  // Datepicker dd/mm/yyyy
+  $(".complex-colorpicker").datepicker({
+    autoclose: true,
+    todayHighlight: true,
+    format: "dd/mm/yyyy",
+    language: "id"
+  });
+  $(".complex-colorpicker2").datepicker({
+    autoclose: true,
+    todayHighlight: true,
+    format: "mm/yyyy",
+    language: "id"
+  });
+  function convertToISO(str) {
+    // 1. Cek jika string kosong, null, atau undefined
+    if (!str || typeof str !== 'string' || str.trim() === "") return null;
+
+    // 2. Pisahkan berdasarkan '/'
+    let p = str.trim().split('/');
+
+    // 3. Jika bagian tidak lengkap (bukan dd/mm/yyyy), 
+    // kembalikan string asli (asumsi mungkin sudah yyyy-mm-dd)
+    if (p.length !== 3) return str;
+
+    let day = p[0].padStart(2, '0');   // Memastikan 2 digit (misal: 1 jadi 01)
+    let month = p[1].padStart(2, '0'); // Memastikan 2 digit
+    let year = p[2];
+
+    return `${year}-${month}-${day}`;
+}
+  
+  function convertmmyyyy(str) {
+      // 1. Cek jika string kosong, null, atau hanya spasi
+      if (!str || str.trim() === "" || str === "undefined") return null;
+
+      // 2. Pecah string mm/yyyy
+      let p = str.split('/');
+      
+      // 3. Pastikan ada dua bagian (bulan dan tahun)
+      if (p.length !== 2) return null;
+
+      let month = p[0]; // mm
+      let year = p[1];  // yyyy
+
+      // 4. Kembalikan format yyyy-mm agar standar database/ISO
+      return `${year}-${month}`;
+  }
+
+  // Recalc jatuh tempo + no faktur saat tanggal diubah
+  $("#tglfaktur").on("change", function(){
+    const tgl = $(this).val();
+    if(!tgl) return;
+    const encoded = encodeURIComponent(tgl);
+    $.getJSON(`/api/sales/invoice_no/${encoded}`, function(resp){
+      $("#jthtempo").val(resp.jatuh_tempo);
+      $("#nofaktur").val(resp.nofaktur);
+    });
+  });
+
+  // ===== Select2 helpers =====
+  function select2OutletTemplate(opt){
+    if(!opt.id) return opt.text;
+    const el = opt.element;
+    const addr = el?.dataset?.address || '';
+    const $tpl = $(`
+      <div>
+        <div>${opt.text}</div>
+        <div class="text-muted small">${addr || '(alamat tidak tersedia)'}</div>
+      </div>
+    `);
+    return $tpl;
+  }
+
+  function select2BarangTemplate(opt){
+    if(!opt.id) return opt.text;
+    const el = opt.element;
+    const stok = el?.dataset?.stok || '-';
+    const limit = el?.dataset?.limit || '-';
+    const kode = el?.dataset?.kode || '';
+    const qty = el?.dataset?.qty || '';
+    const $tpl = $(`
+      <div>
+        <div>${opt.text} <span class="text-muted">(${kode})</span></div>
+        <div class="text-muted small">Stok: ${stok} ${qty} • Limit: ${limit}</div>
+      </div>
+    `);
+    return $tpl;
+  }
+
+  function initSelect2Barang($el){
+    $el.select2({
+      width: '100%',
+      placeholder: 'Pilih barang…',
+      templateResult: select2BarangTemplate,
+      templateSelection: select2BarangTemplate,
+      matcher: function(params, data){
+        if ($.trim(params.term) === '') return data;
+        const term = params.term.toLowerCase();
+        const text = (data.text || '').toLowerCase();
+        const kode = (data.element?.dataset?.kode || '').toLowerCase();
+        const stok = (data.element?.dataset?.stok || '').toLowerCase();
+        return (text.includes(term) || kode.includes(term) || stok.includes(term)) ? data : null;
+      }
+    });
+  }
+
+  // Inisialisasi Select2 global
+  $('#namasales').select2({ width: '100%', placeholder: 'Pilih sales…' });
+  $('#namapengirim').select2({ width: '100%', placeholder: 'Pilih pengirim…' });
+  $('#namaoutlet').select2({
+    width:'100%',
+    placeholder:'Pilih outlet…',
+    templateResult: select2OutletTemplate,
+    templateSelection: select2OutletTemplate,
+    matcher: function(params, data){
+      if ($.trim(params.term) === '') return data;
+      const term = params.term.toLowerCase();
+      const text = (data.text || '').toLowerCase();
+      const addr = (data.element?.dataset?.address || '').toLowerCase();
+      return (text.includes(term) || addr.includes(term)) ? data : null;
+    }
+  });
+  $('.sel-barang').each(function(){ initSelect2Barang($(this)); });
+
+  // Saat pilih salesperson → load daftar outlet (by API yang sudah kamu punya)
+  // Asumsi endpoint GET: /admin/salespersons/<sp_id>/customers → [{customer_id, name, address}]
+  $("#namasales").on("change", function(){
+    const spId = $(this).val();
+    const spName = $('#namasales option:selected').data('name') || '';
+    $("#idsales").val(spId || '');
+    const $out = $("#namaoutlet");
+    $("#idoutlet").val('');
+    $("#alamatoutlet").val('');
+    $out.empty().append('<option value="">Pilih Outlet</option>').trigger('change');
+
+    if(!spId) return;
+
+    $.getJSON(`/admin/salespersons/${spId}/customers`, function(rows){
+      // rows: [{customer_id, name, address}]
+      const frag = document.createDocumentFragment();
+      rows.forEach(r => {
+        const opt = document.createElement('option');
+        opt.value = r.customer_id;
+        opt.text = r.name;
+        opt.dataset.address = r.address || '';
+        frag.appendChild(opt);
+      });
+      $out.append(frag).trigger('change');
+    }).fail(function(xhr){
+      console.error('Gagal load outlet:', xhr.responseText);
+      alert('Gagal memuat outlet untuk sales terpilih.');
+    });
+  });
+  // Outlet terpilih → set id & alamat
+  $("#namaoutlet").on("change", function(){
+    const $opt = $(this).find('option:selected');
+    $("#idoutlet").val($opt.val() || '');
+    $("#alamatoutlet").val($opt.data('address') || '');
+  });
+
+  // Saat pilih barang di repeater → isi hidden id + hint stok/limit
+  $(document).on('change', '.sel-barang', function(){
+    const $row = $(this).closest('[data-repeater-item]');
+    const $opt = $(this).find('option:selected');
+    $row.find('.idbarang').val($opt.val() || '');
+    $row.find('.qty').val($opt.data('qty') || '');
+    $row.find('.hint-stok').text('Stok: ' + ($opt.data('stok') ?? '-'));
+    $row.find('.hint-limit').text('Limit: ' + ($opt.data('limit') ?? '-'));
+  });
+
+  // ===== Format angka utilities (pakai versi kamu) =====
+  function formatKoma(val){
+    val = val.replace(/[^\d,]/g, '');
+    if (val.length > 0 && val[0] !== ',') val = ',' + val.replace(',', '');
+    val = val.slice(0, 3);
+    if (!/^,\d{0,2}$/.test(val)) val = val.slice(0,-1);
+    return val;
+  }
+  function splitKomaValue(num){
+    let v = parseFloat(num || 0).toFixed(2);
+    let [depan, belakang] = v.split(".");
+    depan = depan.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    return { int: depan, koma: ',' + belakang };
+  }
+  function bersihkanFormatAngka(s){ return (s||'').toString().replace(/\./g, ''); }
+  function formatAngkaInput(el){
+    let angka = (el.value||'').replace(/\./g, "");
+    el.value = formatAngka(angka);
+  }
+  function formatAngka(angka){
+    angka = angka.toString();
+    let number_string = angka.replace(/[^,\d]/g, "").toString();
+    let split = number_string.split(",");
+    let sisa = split[0].length % 3;
+    let hasil = split[0].substr(0, sisa);
+    let ribuan = split[0].substr(sisa).match(/\d{3}/g);
+    if (ribuan) {
+      let separator = sisa ? "." : "";
+      hasil += separator + ribuan.join(".");
+    }
+    return hasil;
+  }
+  function formatDiskon(input){
+    let angka = input.value.replace(/[^,\d]/g, '');
+    if (!angka){ input.value=''; return; }
+    angka = parseInt(angka,10);
+    input.value = (angka>=0 && angka<=100) ? angka : '';
+  }
+
+  // Auto-hitungan total/hpp/profit
+  $(document).on("input", ".jmlpermintaan, .hargasatuan, .hargasatuan-koma, .diskon, .hpp, .hpp-koma", function(){
+    const $row = $(this).closest("[data-repeater-item]");
+    const jumlah = parseFloat(($row.find('.jmlpermintaan').val()||'0').replace(',', '.')) || 0;
+
+    const hs_int  = bersihkanFormatAngka($row.find('.hargasatuan').val()||'0');
+    const hs_koma = ($row.find('.hargasatuan-koma').val()||',00').replace(',','') || '00';
+    const harga_satuan = parseFloat(`${hs_int}.${hs_koma}`) || 0;
+
+    const hpp_int  = bersihkanFormatAngka($row.find('.hpp').val()||'0');
+    const hpp_koma = ($row.find('.hpp-koma').val()||',00').replace(',','') || '00';
+    const hpp = parseFloat(`${hpp_int}.${hpp_koma}`) || 0;
+
+    const diskon = parseFloat($row.find('.diskon').val()||'0') || 0;
+
+    let harga_total = jumlah * harga_satuan;
+    if (diskon) harga_total -= harga_total * (diskon/100);
+
+    const total_hpp = jumlah * hpp;
+    const profit = harga_total - total_hpp;
+
+    const t = splitKomaValue(harga_total);
+    const h = splitKomaValue(total_hpp);
+    const p = splitKomaValue(profit);
+
+    $row.find('.hargatotal').val(t.int);
+    $row.find('.hargatotal-koma').val(t.koma);
+    $row.find('.totalhpp').val(h.int);
+    $row.find('.totalhpp-koma').val(h.koma);
+    $row.find('.profit').val(p.int);
+    $row.find('.profit-koma').val(p.koma);
+  });
+
+  // Trigger periodik supaya nilai keep-in-sync
+  setInterval(function(){
+    $(".jmlpermintaan, .hargasatuan, .diskon, .hpp").trigger("input");
+  }, 2500);
+
+  // Submit
+  $("#modal-submit-tambah").on("click", function(){
+    let cancel = false;
+
+	// Ganti bagian ini di dalam $("#modal-submit-tambah").on("click", function(){ ... })
+	const payload = {
+	  tglfaktur: convertToISO($("#tglfaktur").val()),
+	  jthtempo: convertToISO($("#jthtempo").val()),
+	  nofaktur: $("#nofaktur").val(),
+	  
+	  // Data Sales & Pengirim
+	  nama_sales: $('#namasales option:selected').data('name') || '',
+	  id_sales: $("#idsales").val() || null,
+	  nama_pengirim: $('#namapengirim option:selected').data('name') || '',
+	  id_sender: $("#namapengirim").val() || null,
+
+	  // DATA OUTLET (Kirim semua variasi kunci agar pasti terbaca backend)
+	  id_outlet: $("#idoutlet").val() || null,
+	  id_customer: $("#idoutlet").val() || null, 
+	  nama_outlet: $('#namaoutlet option:selected').text().trim() || '',
+	  nama_customer: $('#namaoutlet option:selected').text().trim() || '',
+	  
+	  pembayaran: $("#pembayaran").val(),
+	  pajak: $("#pajak").val(),
+	  items: []
+	};
+
+	// VALIDASI TAMBAHAN: Cegah submit jika outlet kosong
+	if (!payload.id_outlet || payload.nama_outlet === "Pilih Outlet") {
+		alert("Harap pilih Outlet terlebih dahulu!");
+		return;
+	}
+	
+	// Cari bagian ini (sekitar baris 253) dan pastikan isinya seperti ini:
+	$("#namaoutlet").on("change", function(){
+		const $opt = $(this).find('option:selected');
+		const idValue = $opt.val();
+		const textValue = $opt.text();
+		
+		// Set ke hidden input
+		$("#idoutlet").val(idValue || '');
+		$("#alamatoutlet").val($opt.data('address') || '');
+		
+		console.log("ID Outlet terpilih:", idValue);
+		console.log("Nama Outlet terpilih:", textValue);
+	});
+
+	console.log("Data dikirim:", payload); // Cek ini di pencet F12 > Console
+
+    // Validasi dasar
+    if(!payload.id_sales || !payload.id_outlet){
+      alert("Pilih sales & outlet terlebih dahulu.");
+      return;
+    }
+
+    // Data barang dari server (untuk cek stok-limit warning)
+    const data_barang = {{ data_barang | tojson | safe }};
+    function handleResponse2(data, crud, reloadUrl) {
+    console.log("Respons Server:", data);
+    
+    try {
+        if (data && (data.msg === "SUKSES" || data.status === "success")) {
+            alert(`✅ Sukses ${crud}`);
+            
+            if (reloadUrl) {
+                console.log("Mengarahkan ke:", reloadUrl);
+                
+                // Cek apakah fungsi pjax tersedia secara global
+                if (typeof $.pjax === 'function') {
+                    $.pjax({
+                        url: reloadUrl,
+                        container: '#pjax-container', // PASTIKAN ID INI BENAR DI HTML ANDA
+                        fragment: '#pjax-container',  // Tambahkan ini agar lebih akurat
+                        timeout: 5000
+                    });
+                } else {
+                    // Jika PJAX tidak ada, paksa redirect biasa
+                    window.location.href = reloadUrl;
+                }
+            }
+        } else {
+            let errorMsg = data.error || (data.responseJSON && data.responseJSON.error) || 'Terjadi kesalahan sistem';
+            alert(`❌ Gagal ${crud}: ${errorMsg}`);
+            
+            if (errorMsg.includes("401")) {
+                window.location.href = "/login";
+            }
+        }
+    } catch (e) {
+        console.error("Error di handleResponse2:", e);
+        alert('⚠ Terjadi kesalahan pada script: ' + e.message);
+    } finally {
+        // Jika submit ada di dalam modal, ini akan menutupnya
+        $('.modal').modal('hide'); 
+    }
+}
+    $("[data-repeater-item]").each(function(){
+      if (cancel) return;
+      const $row = $(this);
+      const id_barang = $row.find(".sel-barang").val();
+      if(!id_barang) return; // skip baris kosong
+
+      // cek stok warning
+      const jml = parseInt($row.find(".jmlpermintaan").val()||'0',10);
+      const found = data_barang.find(b => String(b.id) === String(id_barang));
+      if(found){
+        const sisa = (found.qty_on_hand||0) - jml;
+        if (sisa <= (found.stok_min||0)){
+          if(!confirm("Stok akan melewati limit! Lanjutkan?")) { cancel = true; return false; }
+        }
+      }
+
+      const hs = bersihkanFormatAngka($row.find(".hargasatuan").val()||'0') + '.' + ($row.find(".hargasatuan-koma").val().replace(',','')||'00');
+      const ht = bersihkanFormatAngka($row.find(".hargatotal").val()||'0') + '.' + ($row.find(".hargatotal-koma").val().replace(',','')||'00');
+      const edValue = $row.find(".ed").val() || "";
+      payload.items.push({
+			id_barang: id_barang,
+			unit_label: $row.find(".sel-barang")?.dataset?.qty || '',
+			jmlpermintaan: $row.find(".jmlpermintaan").val() || "0",
+			harga_satuan: hs,
+			diskon: $row.find(".diskon").val() || "0",
+			harga_total: ht,
+			
+			// Perbaikan Batch: Jika kosong, otomatis "-"
+			batch_no: ($row.find(".batch").val() || "").trim() || "-",
+			
+			ed: convertmmyyyy(edValue),
+		});
+    });
+	
+
+    if(cancel) return;
+
+    $.ajax({
+    url: '/admin/pengeluaran',
+    method: 'POST',
+    data: JSON.stringify(payload),
+    contentType: 'application/json',
+    success: function(data){
+        // Berhasil: Tampilkan pesan dan pindah halaman
+        handleResponse2(data, 'Tambah Data Pengeluaran', "/admin/pengeluaran");
+    },
+    error: function(xhr){
+        // Gagal: Tampilkan pesan error SAJA, jangan pindah halaman (hapus parameter ketiga)
+        handleResponse2(xhr, 'Gagal Menambah Data', null); 
+    }
+});
+  });
+  
+  $("#tambah-barang").on("click", function() {
+            console.log("halol");
+            setTimeout(function() {
+                $(".nmbarang").select2();
+                $('span[data-select2-id="3"]').hide();
+                const observer = new MutationObserver(function(mutationsList, observer) {
+                    const element = document.querySelector('span[data-select2-id="5"]');
+                    if (element) {
+                        element.style.display = 'none';
+                        observer.disconnect(); // Hentikan observer setelah elemen ditemukan
+                    }
+                });
+                observer.observe(document.body, {
+                    childList: true,
+                    subtree: true
+                });
+                $(".complex-colorpicker2").datepicker({
+                    autoclose: true,
+                    todayHighlight: true,
+                    format: "mm/yyyy",
+                    language: "id"
+                  });
+            }, 1000);
+        });
+</script>
+{% endblock %}

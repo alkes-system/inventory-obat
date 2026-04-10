@@ -1,0 +1,16 @@
+/env
+__pycache__
+__pycache__/
+/app/__pycache__
+.vscode
+/.vscode
+app.py
+/app.py
+./app.py
+venv
+.venv
+/venv
+/.venv
+*.pyc
+/app/static
+.env

@@ -1,0 +1,233 @@
+{% extends 'include/include.html' %}
+{% block pjax_content %}
+<div class="page-titles pb-0">
+  <div class="row">
+    <div class="col-lg-8 col-md-6 col-12 align-self-center">
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb mb-0 d-flex align-items-center">
+          <li class="breadcrumb-item">
+            <a href="{{ url_for('dashboard') }}" class="link">
+              <i class="ri-home-3-line fs-5"></i>
+            </a>
+          </li>
+          <li class="breadcrumb-item active" aria-current="page">Data Performa Sales</li>
+        </ol>
+      </nav>
+      <h1 class="mb-0 fw-bold">Data Performa Sales</h1>
+    </div>
+
+    <div class="col-lg-4 col-md-6 d-md-flex align-items-center justify-content-end">
+      <a
+        href="{{ url_for('adminperformasalesprint',
+                         tahun=request.args.get('tahun'),
+                         bulan=request.args.get('bulan'),
+                         sales=request.args.get('sales'),
+                         lunas_tidak=request.args.get('lunas_tidak')) }}"
+        class="btn btn-info d-flex align-items-center ms-2">
+        <i class="ri-download-2-line me-2"></i> Export Excel
+      </a>
+    </div>
+  </div>
+</div>
+
+<div class="container-fluid">
+  <div class="card">
+	  <div class="card-header border-bottom">
+      <h4 class="mb-0">Filter:</h4>
+    </div>
+    <div class="card-body">
+      <div class="row col-12 "> 
+        <div class="col-12 col-md-10">
+          <div class="row g-2">
+            
+            <div class="col-12 col-sm-6 col-lg-3">
+          <select class="form-select select2" id="tahun_data" name="tahun" style="width:100%">
+            <option value="">Semua Tahun</option>
+            {% for t in list_tahun %}
+              <option value="{{ t.tahun }}" {{ 'selected' if request.args.get('tahun', '')|string == t.tahun|string else '' }}>
+                {{ t.tahun }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        
+        <div class="col-12 col-sm-6 col-lg-3">
+          <select class="form-select select2" id="bulan_data" name="bulan" style="width:100%">
+            <option value="">Semua Bulan</option>
+            {% set bulan_list = [
+              {'v':1,'n':'Januari'},{'v':2,'n':'Februari'},{'v':3,'n':'Maret'},{'v':4,'n':'April'},
+              {'v':5,'n':'Mei'},{'v':6,'n':'Juni'},{'v':7,'n':'Juli'},{'v':8,'n':'Agustus'},
+              {'v':9,'n':'September'},{'v':10,'n':'Oktober'},{'v':11,'n':'November'},{'v':12,'n':'Desember'}
+            ] %}
+            {% for b in bulan_list %}
+              <option value="{{ b.v }}" {{ 'selected' if request.args.get('bulan')|int == b.v else '' }}>
+                {{ b.n }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        
+        <div class="col-12 col-sm-6 col-lg-3">
+          <select class="form-select select2" id="lunas_tidak" name="lunas_tidak" style="width:100%">
+              <option value="">Semua Status</option>
+              
+              <option value="PAID" {{ 'selected' if request.args.get('lunas_tidak') == 'PAID' else '' }}>Lunas (Paid)</option>
+              
+              <option value="UNPAID" {{ 'selected' if request.args.get('lunas_tidak') == 'UNPAID' else '' }}>Belum Bayar (Unpaid)</option>
+              
+              <option value="PARTIAL" {{ 'selected' if request.args.get('lunas_tidak') == 'PARTIAL' else '' }}>Bayar Sebagian (Partial)</option>
+              
+              <option value="CANCELLED" {{ 'selected' if request.args.get('lunas_tidak') == 'CANCELLED' else '' }}>Dibatalkan (Cancelled)</option>
+          </select>
+      </div>
+		    
+        <div class="col-12 col-sm-6 col-lg-3">
+          <select class="form-select select2" id="sales_data" name="sales" style="width:100%">
+            <option value="">Semua Sales</option>
+            {% for s in nama_sales %}
+              <option value="{{ s.nama_sales }}" {{ 'selected' if request.args.get('sales') == s.nama_sales else '' }}>
+                {{ s.nama_sales }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+    </div>
+  <div class="col-12 col-md-2 ms-md-auto">
+    <button type="button" class="btn btn-info w-100" onclick="run()">Submit</button>
+  </div>
+  </div>
+  {% set tahun_req = request.args.get('tahun') %}
+    {% if tahun_req %}
+      {% for h in list_tahun %}
+        {% if not tahun_req or tahun_req|string == h.tahun|string %}
+          <div id="table_{{ h.tahun }}" class="mt-3">
+
+            <div class="scroll-table">
+              <table id="table_{{ h.tahun }}_data" class="table w-100 table-bordered display text-nowrap">
+                <thead class="table-light">
+                  <tr>
+                    <th>No</th>
+                    <th>Nama Outlet</th>
+                    <th>Nama Sales</th>
+                    {# header bulan dinamis dari backend (months) #}
+                    {% for m in months %}
+                      <th>{{ m }}</th>
+                    {% endfor %}
+                    <th>Total Sales</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for r in data_fix if r.tahun == h.tahun %}
+                  <tr class="data-utama">
+                    <td>{{ loop.index }}</td>
+                    <td>{{ r.nama_outlet }}</td>
+                    <td>{{ r.nama_sales }}</td>
+                    {% for m in months %}
+                      {% set key = 'M' ~ m %}
+                      <td>
+                        <div class="d-flex justify-content-between w-100">
+                          <span></span>
+                          <span>{{ (r[key] or 0) | format_performa_sales }}</span>
+                        </div>
+                      </td>
+                    {% endfor %}
+                    <td>
+                      <div class="d-flex justify-content-between w-100">
+                        <span></span>
+                        <span>{{ (r.total_sales or 0) | format_performa_sales }}</span>
+                      </div>
+                    </td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+
+                <tfoot style="background-color:#f6f8fb;">
+                  <tr>
+                    <th></th>
+                    <th></th>
+                    <th>JUMLAH:</th>
+                    {% set ft = (footer_totals.get(h.tahun) or footer_totals.get(h.tahun|string) or {}) %}
+                    {% for m in months %}
+                      <th>
+                        <div class="d-flex justify-content-between w-100">
+                          <span></span>
+                          <span>{{ (ft['M' ~ m] or 0) | format_performa_sales }}</span>
+                        </div>
+                      </th>
+                    {% endfor %}
+                    <th>
+                      <div class="d-flex justify-content-between w-100">
+                        <span></span>
+                        <span>{{ (ft.get('total_sales') or 0) | format_performa_sales }}</span>
+                      </div>
+                    </th>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+
+          </div>
+          <script>
+          $("#table_{{h.tahun}}_data").DataTable({
+            "paging": false,          // Menonaktifkan pagination
+            "info": false,           // Menonaktifkan info jumlah entri
+            "searching": true,       // Mengaktifkan fitur pencarian
+            "lengthChange": false,   // Menonaktifkan pilihan jumlah entri yang ditampilkan
+            "language": {
+                "search": "",          // Kosongkan label pencarian
+                "searchPlaceholder": "Cari..." // Placeholder untuk input pencarian
+            },
+            "dom": '<"search-container"f>rt', // Menempatkan pencarian di dalam div khusus
+            "scrollX": true,            // Mengaktifkan scroll horizontal
+            "scrollY": "800px", // Mengatur tinggi tabel menjadi 200px dengan scrollbar vertikal
+            "scrollCollapse": true, // Scroll hanya muncul jika data melebihi tinggi yang ditentukan
+          })
+          </script>
+        {% endif %}
+      {% endfor %}
+    {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- (Modal generik dibiarkan kalau kamu pakai di tempat lain) -->
+<div class="modal fade" id="generic-modal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content">
+      <div class="modal-header d-flex align-items-center">
+        <h4 class="modal-title" id="modal-title">Title</h4>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body" id="modal-body">...</div>
+      <div class="modal-footer">
+        <a id="modal-submit" class="btn btn-info d-flex align-items-center ms-2">Submit</a>
+        <button type="button" class="btn btn-light-danger text-danger" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  
+  function run() {
+    const tahun = $('#tahun_data').val() || '';
+    const bulan = $('#bulan_data').val() || '';
+    const sales = $('#sales_data').val() || '';
+    const status = $('#lunas_tidak').val() || '';
+
+    const qs = new URLSearchParams();
+    if (tahun) qs.set('tahun', tahun);
+    if (bulan) qs.set('bulan', bulan);
+    if (sales) qs.set('sales', sales);
+    if (status) qs.set('lunas_tidak', status);
+
+    $.pjax({
+      url: `?${qs.toString()}`,
+      container: '#pjax-container'
+    });
+  }
+</script>
+{% endblock %}

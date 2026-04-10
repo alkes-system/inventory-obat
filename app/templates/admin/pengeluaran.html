@@ -1,0 +1,359 @@
+{% extends 'include/include.html' %}
+{% block pjax_content %}
+<head>
+<style>
+.table-striped > tbody > tr:nth-of-type(odd){
+--bs-table-accent-bg:transparent;
+}
+.table-striped > tbody > tr:nth-of-type(even){
+--bs-table-accent-bg:rgba(0,0,0,.05);
+}
+</style>
+</head>
+<script>
+    
+  function handleAjax(url, method, data, onSuccess, onError) {
+    $.ajax({
+      url: url,
+      method: method,
+      data: JSON.stringify(data),
+      contentType: 'application/json',
+      success: onSuccess,
+      error: onError
+    });
+  }
+
+  function hapus(id) {
+    if (confirm(`Anda yakin menghapus data ini ?`)) {
+      handleAjax(
+        '/admin/pengeluaran/'+id,
+        'DELETE',
+        { id: id },
+        function(data) { 
+			handleResponse(data, "Hapus Data");
+		},
+        function(xhr, status, error) { 
+			handleResponse(xhr, "Hapus Data");
+		}
+      );
+    }
+  }
+
+</script>
+<div class="page-titles pb-0">
+  <div class="row">
+    <div class="col-lg-8 col-md-6 col-12 align-self-center">
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb mb-0 d-flex align-items-center">
+          <li class="breadcrumb-item">
+            <a href="index.html" class="link">
+              <i class="ri-home-3-line fs-5"></i>
+            </a>
+          </li>
+          <li class="breadcrumb-item active" aria-current="page">Data Pengeluaran Barang</li>
+        </ol>
+      </nav>
+      <h1 class="mb-0 fw-bold">Data Pengeluaran Barang</h1>
+    </div>
+    <div class="col-lg-4 col-md-6 d-md-flex align-items-center justify-content-end">
+      <a href="/admin/pengeluaran-tambah" class="btn btn-info d-flex align-items-center ms-2">
+        <!-- data-bs-toggle="modal"
+         data-bs-target="#tambah-modal "> -->
+        <i class="ri-add-line me-1"></i> Tambah Data
+      </a>
+    </div>
+  </div>
+</div>
+
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-12">
+      <div class="card">
+	  <div class="card-header border-bottom">
+          <h4 class="mb-0">Filter:</h4>
+        </div>
+        <div class="card-body">
+          <div class="row col-12 "> 
+            <div class="col-12 col-md-10">
+              <div class="row g-2">
+              
+              <div class="col-12 col-sm-6 col-lg-4">
+                  <select class="form-select select2" style="width: 100%; height: 36px" id="tahun_data" name="tahun">
+                    <option value="" >Semua Tahun</option>
+                    {% for i in list_tahun %}
+                    <option value="{{ i.tahun }}" {% if request.args.get('tahun')|int == i.tahun|int %} selected {% endif %} >{{ i.tahun }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+              
+                <div class="col-12 col-sm-6 col-lg-4">
+                  <select class="form-select select2" style="width: 100%; height: 36px" id="bulan_data" name="bulan">
+                    <option value="" >Semua Bulan</option>
+                    {% for i in [{"value":"1","nama_bulan":"Januari"},{"value":"2","nama_bulan":"Februari"},{"value":"3","nama_bulan":"Maret"},
+                    {"value":"4","nama_bulan":"April"},{"value":"5","nama_bulan":"Mei"},{"value":"6","nama_bulan":"Juni"},{"value":"7","nama_bulan":"Juli"},
+                    {"value":"8","nama_bulan":"Agustus"},{"value":"9","nama_bulan":"September"},{"value":"10","nama_bulan":"Oktober"},
+                    {"value":"11","nama_bulan":"November"},{"value":"12","nama_bulan":"Desember"}] %}
+                    <option value="{{ i.value }}" {% if request.args.get('bulan')|int == i.value|int %} selected {% endif %} >{{ i.nama_bulan }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+              
+                <div class="col-12 col-sm-6 col-lg-4">
+                  <select class="form-select select2" style="width: 100%; height: 36px" id="tanggal_data" name="tanggal">
+                    <option value="" >Semua Tanggal</option>
+                    {% for i in ["1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16",
+                    "17","18","19","20","21","22","23","24","25","26","27","28","29","30","31"] %}
+                    <option value="{{ i }}" {% if request.args.get('tanggal')|int == i|int %} selected {% endif %} >{{ i }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+              
+                <div class="col-12 col-sm-6 col-lg-4">
+                  <select class="form-select select2 " style="width: 100%; height: 36px" id="nama_sales">
+                    <option value="" >Semua Nama Sales</option>
+                    {% for i in nama_sales %}
+                    <option value="{{ i.name }}" {% if request.args.get('nama_sales') == i.name %} selected {% endif %} >{{ i.name }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+              
+                <div class="col-12 col-sm-6 col-lg-4">
+                  <select class="form-select select2" style="width: 100%; height: 36px" id="nama_outlet">
+                    <option value="" >Semua Nama Outlet</option>
+                    {% for i in nama_customer %}
+                    <option value="{{ i.name }}" {% if request.args.get('nama_outlet') == i.name %} selected {% endif %} >{{ i.name }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+              </div>
+            </div>
+        <div class="col-12 col-md-2 ms-md-auto">
+          <button type="button" class="btn btn-info w-100" onclick="run()">Submit</button>
+        </div>
+        </div>
+              <!-- Apply max-height for Transaksi table -->
+              <div class="table-responsive mt-3">
+               	<table id="table__data" class="table table-bordered w-100 table-responsive-stack">
+  <thead class="table-light">
+				
+                  <tr>
+              <th  class="ps-1 pe-1" > No</th>
+              <th class="j-jml-menerima"> Tanggal Faktur</th> 
+              <th class="j-jml-menerima"> Nomor Faktur</th> 
+              <th class="j-jml-menerima"> Nama Sales</th> 
+              <th class="j-jml-menerima"> Nama Pengirim</th> 
+			        <th class="j-jml-menerima"> Cash / Tempo</th> 
+              <th class="j-jml-menerima"> Nama Outlet</th>
+              <th class="j-jml-menerima"> Nama Barang</th>
+              <th class="j-jml-menerima"> Batch</th>
+              <th class="j-jml-menerima"> Expired Date</th>
+              <th class="j-jml-menerima"> Jumlah</th>
+              <th class="j-jml-menerima"> Satuan</th> 
+              <th class="j-jml-menerima"> Harga Satuan</th>
+              <th class="j-jml-menerima"> Diskon</th>
+              <th class="j-jml-menerima"> Harga Total</th>
+              <!-- <th> Total Hpp</th>
+              <th> Profit</th> -->
+              <th class="j-jml-menerima"> Performa Sales</th>
+              <th class="j-jml-menerima"> Terkena Pajak</th>
+              <th class="j-jml-menerima"> Status Pelunasan</th>
+              <th class="j-jml-menerima"> Aksi</th>
+                  </tr>
+                </thead>
+                 <tbody>
+              {% for i in info_list %}
+                  <tr class="data-utama">
+                <td class="ps-1 pe-1 j-jml-menerima" data-label="No">{{ (page - 1) * per_page + loop.index }}</td>
+                <td data-label="Tanggal Faktur">{{ i.invoice_date }} </td>
+                <td data-label="Nomor Faktur">{{ i.invoice_no }} </td>
+                <td data-label="Nama Sales">{{ i.nama_sales }} </td>
+                <td data-label="Nama Pengirim">{{ i.nama_pengirim }} </td>
+				        <td data-label="Cash / Tempo">{{ i.payment_term }}</td>
+                <td data-label="Nama Outlet">{{ i.nama_customer }} </td>
+                <td data-label="Nama Barang" class="sebaris">
+                  <div class="multi-line">
+                {% for j in i.detail %}
+                <div class="text-nowrap">{{ j.name }} </div>
+                {% endfor %}</div></td>
+                <td data-label="Batch" class="sebaris ">
+                <div class="multi-line">
+                 {% for j in i.detail %}
+                <div class="text-nowrap">{{ j.batch_no|format_master }}</div>
+                {% endfor %}</div></td>
+                <td data-label="Expired Date" class="sebaris ">
+                <div class="multi-line">
+                 {% for j in i.detail %}
+                <div class="text-nowrap">{{ j.expired_date|format_master }}</div>
+                {% endfor %}</div></td>
+                <td data-label="Jumlah" class="sebaris ">
+                <div class="multi-line ">
+                {% for j in i.detail %}
+                <div class="">{{ j.qty }} </div>
+                {% endfor %}</div></td>
+                <td data-label="Satuan" class="sebaris ">
+                <div class="multi-line ">
+                {% for j in i.detail %}
+                <div class="">{{ j.unit }} </div>
+                {% endfor %}</div></td>
+                <td data-label="Harga Satuan" class="sebaris">
+                <div class="multi-line">
+                {% for j in i.detail %}
+                <div class="justify-content-between d-flex w-100">
+                  <div class="justify-content-start">Rp </div>
+                  <div class="justify-content-end">{{ j.unit_price | format_rupiah  }}</div>
+                </div>
+                {% endfor %}</div></td>
+                <td data-label="Diskon" class="sebaris ">
+                <div class="multi-line">
+                {% for j in i.detail %}
+                <div >{{ j.discount_percent|int }}% </div>
+                {% endfor %}</div></td>
+                <td data-label="Harga Total" class="sebaris">
+                <div class="multi-line">
+                {% for j in i.detail %}
+                <div class="justify-content-between d-flex w-100">
+                  <div class="justify-content-start">Rp </div>
+                  <div class="justify-content-end">{{ j.total_amount | format_rupiah  }}</div>
+                </div>
+                {% endfor %}</div></td>
+                {# <td data-label="Total Hpp" class="sebaris">
+                <div class="multi-line">
+                {% for j in i.detail %}
+                <div class="justify-content-between d-flex w-100">
+                  <div class="justify-content-start">Rp </div>
+                  <div class="justify-content-end">{{ j.totalhpp | format_rupiah  }}</div>
+                </div>
+                {% endfor %}</div></td> #}
+                {# <td data-label="Profit" class="sebaris">
+                <div class="multi-line">
+                {% for j in i.detail %}
+                <div class="justify-content-between d-flex w-100">
+                  <div class="justify-content-start"  >Rp </div>
+                  <div class="justify-content-end" >{{ j.profit | format_rupiah  }}</div>
+                </div>
+                {% endfor %}</div></td> #}
+                <td data-label="Performa Sales">
+                <div class="justify-content-between d-flex w-100">
+                  <div class="justify-content-start"  >Rp </div>
+                  <div class="justify-content-end" >{{ i.performa_sales | format_rupiah  }}</div>
+                </div>
+                </td>
+                <td data-label="Terkena Pajak">{{ i.tax_flag}}</td>
+                <td data-label="Status Pelunasan">{{ i.status}}</td>
+                
+                <td data-label="Aksi">
+                  <!--<button class="btn btn-primary"  data-bs-toggle="modal" data-bs-target="#generic-modal-edit-{{i.id}}">Edit</button> -->
+                  
+                  <div class="justify-content-between d-flex"><a class="btn btn-sm btn-primary" target="_blank" href='/admin/pengeluaran/print?id={{i.id}}'>Print</a>
+                  <a class="btn btn-sm btn-success" target="_blank" href='/admin/pengeluaran/print_pajak?id={{i.id}}'>Print+Pajak</a></div>
+                  <div class="justify-content-between d-flex"><a href='/admin/pengeluaran/{{i.id}}' class="btn btn-sm btn-warning" >Edit</a>
+                  <button onclick="hapus({{ i.id |int }})" class="btn btn-sm btn-danger">Hapus</button></div>
+                </td>
+                  </tr>
+                {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          <div class="d-flex justify-content-between align-items-center ">
+            <div>
+              <strong>Halaman {{ page }} dari {{ total_pages }}</strong> — Total Data: {{ total_records }}
+            </div>
+            <nav aria-label="Page navigation">
+              <ul class="pagination mb-0">
+
+                <!-- Tombol pertama -->
+                {% if page > 1 %}
+                  <li class="page-item">
+                    <a class="page-link" href="?page=1&per_page={{ per_page }}{% for key, value in request.args.items() if key != 'page' %}&{{ key }}={{ value }}{% endfor %}">&laquo; First</a>
+                  </li>
+                {% else %}
+                  <li class="page-item disabled"><span class="page-link">&laquo; First</span></li>
+                {% endif %}
+
+                <!-- Tombol sebelumnya -->
+                {% if has_prev %}
+                  <li class="page-item">
+                    <a class="page-link" href="?page={{ page - 1 }}&per_page={{ per_page }}{% for key, value in request.args.items() if key != 'page' %}&{{ key }}={{ value }}{% endfor %}" aria-label="Previous">
+                      <span aria-hidden="true">&laquo;</span>
+                    </a>
+                  </li>
+                {% else %}
+                  <li class="page-item disabled"><span class="page-link">&laquo;</span></li>
+                {% endif %}
+
+                <!-- Nomor halaman -->
+                {% for p in page_range %}
+                  {% if p == page %}
+                    <li class="page-item active"><span class="page-link">{{ p }}</span></li>
+                  {% else %}
+                    <li class="page-item">
+                      <a class="page-link" href="?page={{ p }}&per_page={{ per_page }}{% for key, value in request.args.items() if key != 'page' %}&{{ key }}={{ value }}{% endfor %}">{{ p }}</a>
+                    </li>
+                  {% endif %}
+                {% endfor %}
+
+                <!-- Tombol selanjutnya -->
+                {% if has_next %}
+                  <li class="page-item">
+                    <a class="page-link" href="?page={{ page + 1 }}&per_page={{ per_page }}{% for key, value in request.args.items() if key != 'page' %}&{{ key }}={{ value }}{% endfor %}" aria-label="Next">
+                      <span aria-hidden="true">&raquo;</span>
+                    </a>
+                  </li>
+                {% else %}
+                  <li class="page-item disabled"><span class="page-link">&raquo;</span></li>
+                {% endif %}
+
+                <!-- Tombol terakhir -->
+                {% if page < total_pages %}
+                  <li class="page-item">
+                    <a class="page-link" href="?page={{ total_pages }}&per_page={{ per_page }}{% for key, value in request.args.items() if key != 'page' %}&{{ key }}={{ value }}{% endfor %}">Last &raquo;</a>
+                  </li>
+                {% else %}
+                  <li class="page-item disabled"><span class="page-link">Last &raquo;</span></li>
+                {% endif %}
+
+              </ul>
+            </nav>
+          </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    <!-- This Page JS -->
+
+      <script>
+		$(document).ready(function(){ 
+			
+		})
+        function run() {
+        const tahun = document.getElementById('tahun_data').value;
+        const bulan = document.getElementById('bulan_data').value;
+        const tanggal = document.getElementById('tanggal_data').value;
+        const nama_sales = document.getElementById('nama_sales').value;
+        const nama_outlet = document.getElementById('nama_outlet').value;
+
+        const queryParams = new URLSearchParams();
+        if (tahun !== "tahun") queryParams.append("tahun", tahun);
+        if (bulan !== "bulan") queryParams.append("bulan", bulan);
+        if (tanggal !== "tanggal") queryParams.append("tanggal", tanggal);
+        if (nama_sales !== "nama_sales") queryParams.append("nama_sales", nama_sales);
+        if (nama_outlet !== "nama_outlet") queryParams.append("nama_outlet", nama_outlet);
+
+        url = `?${queryParams.toString()}`
+		$.pjax({
+			url: url,
+			container: '#pjax-container'
+		});
+        }
+        $('#tambah-modal').on('shown.bs.modal', function () {
+          $('#nmbarang').select2({
+            dropdownParent: $('#tambah-modal') // Pastikan dropdown muncul di dalam modal
+          });
+          $('#supplier').select2({
+            dropdownParent: $('#tambah-modal') // Pastikan dropdown muncul di dalam modal
+          });
+        });
+		</script>
+
+{% endblock %}

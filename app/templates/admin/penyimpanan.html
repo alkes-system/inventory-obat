@@ -1,0 +1,227 @@
+{% extends 'include/include.html' %}
+{% block pjax_content %}
+<head>
+<style>
+.table-striped > tbody > tr:nth-of-type(odd){
+--bs-table-accent-bg:transparent;
+}
+.table-striped > tbody > tr:nth-of-type(even){
+--bs-table-accent-bg:rgba(0,0,0,.05);
+}
+</style>
+</head>
+<script>
+  function formatRupiah(input) {
+    let angka = input.value.replace(/[^,\d]/g, ''); // Menghapus semua karakter selain angka dan koma
+    if (angka) {
+        let hasil = Number(angka.replace(/,/g, '')).toLocaleString('id-ID'); // Format angka sesuai Indonesia
+        input.value = hasil;
+    } else {
+        input.value = ''; // Jika input tidak valid (semua dihapus), set ke string kosong
+    }
+  }
+function handleAjax(url, method, data, onSuccess, onError) {
+  $.ajax({
+    url: url,
+    method: method,                 // atau 'type' kalau jQuery lama
+    data: JSON.stringify(data),
+    contentType: 'application/json',
+    dataType: 'json',
+    success: onSuccess,
+    error: onError
+  });
+}
+
+function showModal(title, body, onSubmit) {
+  $('#modal-title').text(title);
+  $('#modal-body').html(body);
+  $('#modal-submit')
+    .off('click')              // cegah dobel handler
+    .on('click', onSubmit);
+  $('#generic-modal').modal('show');
+}
+
+
+</script>
+<div class="page-titles pb-0">
+  <div class="row">
+    <div class="col-lg-8 col-md-6 col-12 align-self-center">
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb mb-0 d-flex align-items-center">
+          <li class="breadcrumb-item">
+            <a href="index.html" class="link">
+              <i class="ri-home-3-line fs-5"></i>
+            </a>
+          </li>
+          <li class="breadcrumb-item active" aria-current="page">Data Stok</li>
+        </ol>
+      </nav>
+      <h1 class="mb-0 fw-bold">Data Stok</h1>
+    </div>
+    <div class="col-lg-4 col-md-6 d-md-flex align-items-center justify-content-end">
+      <!-- <a href="javascript:void(0)" class="btn btn-info d-flex align-items-center ms-2" onclick="tambahBaris3()">
+        <i class="ri-add-line me-1"></i> Tambah Data
+      </a> -->
+    </div>
+  </div>
+</div>
+
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-12">
+      <div class="card">
+	  <div class="card-header border-bottom">
+          <h4 class="mb-0">Filter:</h4>
+        </div>
+        <div class="card-body">
+            <div class="row col-12"> 
+			       <div class="col-sm-4">
+              <div class="form-group mb-3">
+               <select class="select2 form-select"style="width: 100%; height: 36px" id="nama_barang" >
+                  <option value=""> Semua Nama Barang </option>
+                  {% for i in nama_barang %}
+                  <option value="{{i.id}}" {% if request.args.get('id_barang')|int == i.id|int %} selected {% endif %} > {{i.nama_barang}} | {{i.kode_barang}}</option>
+                  {% endfor %}
+                </select>
+              </div>
+             </div>
+			            
+             <div class="col-sm-3">
+              <div class="form group mb-3">
+               <button class="btn btn-info" onclick="run()">Submit</button>
+              </div>
+             </div>
+          </div>
+		
+                  <!-- Apply max-height for Transaksi table -->
+                  <div class="table-responsive ">
+                    <table id="table__data" class="table table-bordered w-100 table-responsive-stack">
+                    <thead class="table-light">
+                      <tr>
+                        <th> No</th>
+                        <th class="j-jml-menerima"> Kode Barang</th> 
+                        <th class="j-jml-menerima"> Nama Barang</th> 
+                        <th class="j-jml-menerima"> Sisa Stok</th>
+                        <th class="j-jml-menerima"> Satuan</th>
+                        <th class="j-jml-menerima"> Stok Limit</th>
+                        <th class="j-jml-menerima"> Status</th> 
+                        <th class="j-jml-menerima"> Aksi </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                        {% for i in info_list %}
+                            <tr class="data-utama" >
+                                <td data-label="No">{{ (page - 1) * per_page + loop.index }}</td>
+                                <td data-label="Kode Barang">{{ i.kode_barang }}</td>
+                                <td data-label="Nama Barang">{{ i.nama_barang }}</td>
+                                <td data-label="Sisa Stok">{{ i.sisa_gudang }}</td>
+                                <td data-label="Satuan">{{ i.unit }}</td>
+                                <td data-label="Stok Limit">{{ i.stok_limit }}</td>
+                                <td data-label="Status">{{ i.status }}</td>
+                                <td data-label="Aksi">
+                                <!-- <button data-bs-toggle="modal" data-bs-target="#modal-{{ i.product_id }}" class="btn btn-success">Nota</button> -->
+                                <button 
+                                  class="btn btn-sm btn-warning btn-edit" 
+                                  data-id="{{ i.product_id }}"
+                                  data-nama="{{ i.nama_barang }}"
+                                  data-stok="{{ i.sisa_gudang }}"
+                                  data-kode="{{i.kode_barang}}" 
+                                  data-unit="{{i.unit}}"
+                                  data-limit="{{i.stok_limit}}">
+                                  Edit
+                                </button>
+                              </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal template -->
+<div class="modal fade" id="generic-modal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content">
+      <div class="modal-header d-flex align-items-center">
+        <h4 class="modal-title" id="modal-title">Title</h4>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body" id="modal-body">...</div>
+      <div class="modal-footer">
+        <div class="col-lg-4 col-md-6 d-md-flex align-items-center justify-content-end">
+          <a id="modal-submit" class="btn btn-info d-flex align-items-center ms-2">Submit</a>
+        </div>
+        <button type="button" class="btn btn-light-danger text-danger font-weight-medium waves-effect text-start" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+    <!-- This Page JS -->
+	<script>
+		$(document).ready(function(){ 
+			$(document).on('click', '.btn-edit', function() {
+        const product_id= $(this).data('id');
+        const kode_barang= $(this).data('kode');
+        const nama_barang= $(this).data('nama');
+        const unit= $(this).data('unit');
+        const sisa_penyimpanan= $(this).data('stok');
+        const stok_limit= $(this).data('limit');
+        $("#modal-submit").show();
+        showModal(
+          `Edit Stok — ${nama_barang} (${kode_barang})`,
+          `
+            <div class="form-group">
+              <label for="sisa_penyimpanan_edit">Stok Baru</label>
+              <input type="number" id="sisa_penyimpanan_edit" class="form-control" min="0" step="1"
+                    placeholder="0" value="${Number(sisa_penyimpanan) || 0}">
+              <small class="text-muted">Satuan: ${unit}. Batas aman: ${Number(stok_limit) || 0}</small>
+            </div>
+            <div class="form-group">
+              <label for="note_edit">Catatan</label>
+              <textarea id="note_edit" class="form-control" placeholder="Misal: Stock opname / koreksi input"></textarea>
+            </div>
+          `,
+          function () {
+            const btn = $('#modal-submit');
+            const newQty = Number($('#sisa_penyimpanan_edit').val());
+            const note   = $('#note_edit').val() || 'Manual adjustment';
+            if (Number.isNaN(newQty) || newQty < 0) {
+              alert('Jumlah stok tidak valid'); return;
+            }
+            btn.prop('disabled', true).text('Menyimpan...');
+
+            const payload = { product_id: product_id, new_qty: newQty, note: note };
+
+            handleAjax(
+              '/admin/penyimpanan', 'PUT', payload,
+              function (response) {
+                // sukses
+                handleResponse(response, "Edit");
+              },
+              function (errPayload) {
+                //gagal
+                handleResponse(errPayload, "Edit");
+              }
+            );
+          }
+        );
+      });
+		})
+		function run() {
+		const nama_barang = document.getElementById('nama_barang').value;
+		const queryParams = new URLSearchParams();
+		if (nama_barang !== "nama_barang") queryParams.append("id_barang", nama_barang);
+		url = `?${queryParams.toString()}`
+		$.pjax({
+			url: url,
+			container: '#pjax-container'
+		});
+		}
+
+	</script>
+{% endblock %}
